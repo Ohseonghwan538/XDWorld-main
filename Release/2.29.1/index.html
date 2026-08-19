@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<meta charset='utf-8'>
+<head>
+	<title></title>
+	<link rel='stylesheet' href='./css/style.css'>
+</head>
+<body>
+	<div id='map'></div>
+	<div class="map-control-panel">
+            <span>1. Click object </span>
+            <br>
+            <span>2. Drag the cross button to move the object </span>
+            <input type="button" id="moving" value="+" onclick="">
+        </div>
+	<script src="./js/GhostSymbol.js">
+				function mouseOverInterface(_isOver) {
+			if (typeof Module == "object") {
+				Module.XDIsMouseOverDiv(_isOver);
+			}
+		}
+		window.onresize = function(e) {
+			if (typeof Module == 'object') {
+				if (typeof Module.Resize == 'function') {
+					Module.Resize(window.innerWidth, window.innerHeight);
+					Module.XDRenderData();
+				}
+			}
+		};
+	</script>
+	<script src="./engine/XDWorldEM.js"></script>
+</body>
+</html>
