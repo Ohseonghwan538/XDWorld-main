@@ -96,18 +96,15 @@ function initEvent() {
             }
         }
     };
-
-    // 지형 좌표 변환 및 선택된 객체 위치 업데이트 전담 함수
+    // 지형 좌표 및 3D 건물 표면 좌표 변환 전담 함수
     function updateObjectPosition() {
         isPendingRaf = false;
 
         if (!GLOBAL.MODEL_MOVING || !lastMouseEvent) return;
 
-        // 💡 엔진의 Select 상태에 있는 '단 하나의 객체'만 추려내어 이동
         var selectedObject = Module.getMap().getSelectObject();
         if (selectedObject) {
 
-            // Canvas Rect 및 Scale 보정을 거친 정확한 Screen 좌표 전달
             var rect = Module.canvas.getBoundingClientRect();
             var scaleX = Module.canvas.width / rect.width;
             var scaleY = Module.canvas.height / rect.height;
@@ -115,11 +112,24 @@ function initEvent() {
             var canvasX = (lastMouseEvent.clientX - rect.left) * scaleX;
             var canvasY = (lastMouseEvent.clientY - rect.top) * scaleY;
 
-            // Move the object by converting screen coordinates to map coordinates
+            // 💡 ScreenToMapPointEX는 지형뿐만 아니라 화면 내 3D 객체/건물 표면의 (Lon, Lat, Alt)를 반환합니다.
             var targetPosition = Module.getMap().ScreenToMapPointEX(new Module.JSVector2D(canvasX, canvasY));
 
-            // 지형 판독 성공 시 해당 개체의 좌표만 업데이트
             if (targetPosition) {
+                // 💡 1. 순수 지형(DEM) 높이 취득
+                var terrainAlt = Module.getMap().getTerrHeightFast(targetPosition.longitude, targetPosition.latitude);
+
+                // 💡 2. ScreenToMapPointEX가 집어낸 고도(targetPosition.altitude)가 지형보다 높다면 '건물 위'로 판단
+                var surfaceAlt = targetPosition.altitude;
+                if (surfaceAlt < terrainAlt) {
+                    surfaceAlt = terrainAlt;
+                }
+
+                // 💡 3. 건물 표면 또는 지형 표면 고도에 발바닥 보정값(1.2) 추가
+                var WOLF_FEET_OFFSET = 1.3;
+                targetPosition.altitude = surfaceAlt + WOLF_FEET_OFFSET;
+
+                // 💡 4. 최종 고도 적용
                 selectedObject.setPosition(targetPosition);
             }
         }
