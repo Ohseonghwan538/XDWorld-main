@@ -8,12 +8,13 @@
 <body>
 	<div id='map'></div>
 	<div class="map-control-panel">
-            <span>1. Click object </span>
-            <br>
-            <span>2. Drag the cross button to move the object </span>
-            <input type="button" id="moving" value="+" onclick="">
-        </div>
-	<script src="./js/GhostSymbol.js">
+		<span>1. Click object </span>
+		<br>
+		<span>2. Drag the cross button to move the object </span>
+		<input type="button" id="moving" value="+" onclick="">
+	</div>
+	<script src="./engine/XDWorldEM.js" defer></script>
+	<script src="./js/module.js" defer>
 				function mouseOverInterface(_isOver) {
 			if (typeof Module == "object") {
 				Module.XDIsMouseOverDiv(_isOver);
@@ -28,6 +29,7 @@
 			}
 		};
 	</script>
-	<script src="./engine/XDWorldEM.js"></script>
+	<script src="./js/objectControll.js" defer></script>
+	<script src="./js/init.js" defer></script>
 </body>
 </html>
