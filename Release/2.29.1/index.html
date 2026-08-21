@@ -9,9 +9,19 @@
 <body>
 	<div id='map'></div>
 	<div class="map-control-panel">
-		<span>1. Click object </span>
+		<button id="add-wolf-btn" style="position: absolute; padding: 10px 15px; font-weight: bold; cursor: pointer;">
+			🐺 늑대 생성하기
+		</button>
+		<br><br>
+		<span>1. 늑대 생성하기 버튼 클릭 </span>
 		<br>
-		<span>2. Drag the cross button to move the object </span>
+		<span>2. 십자 버튼을 드래그하여 객체를 이동시킬 수 있습니다 </span>
+		<br>
+		<button id="toggle-building-btn" style="position: absolute; padding: 10px 15px; font-weight: bold; cursor: pointer;">
+			🏢 건물 레이어 끄기
+		</button>
+		<br><br>     
+		<span>1. 건물 표시 여부를 설정할 수 있습니다 </span>
 		<input type="button" id="moving" value="+" onclick="">
 	</div>
 	<script src="./engine/XDWorldEM.js" defer></script>
@@ -31,6 +41,6 @@
 		};
 	</script>
 	<!-- 레이어 및 객체를 제어하는 메인 로직 (ES6 Module 필수) -->
-	<script type="module" src="./js/main.js"></script>
+	<script type="module" src="./js/main.js" defer></script>
 </body>
 </html>
