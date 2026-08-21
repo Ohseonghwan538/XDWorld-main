@@ -28,7 +28,7 @@
 	border-radius: 10px;
 	cursor: pointer;
 }
-    /* 지도 위에 띄울 컨트롤 패널 (작성하신 코드 스타일링) */
+    /* 조작 안내 패널 */
     .map-control-panel {
         position: absolute;
         top: 10px;

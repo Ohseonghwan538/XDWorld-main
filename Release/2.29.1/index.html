@@ -15,22 +15,22 @@
 		<input type="button" id="moving" value="+" onclick="">
 	</div>
 	<script src="./engine/XDWorldEM.js" defer></script>
-	<script src="./js/module.js" defer>
-				function mouseOverInterface(_isOver) {
+	<script src="./js/module.js" defer></script>
+	<!-- UI 마우스오버 및 리사이즈 스크립트 -->
+	<script>
+		function mouseOverInterface(_isOver) {
 			if (typeof Module == "object") {
 				Module.XDIsMouseOverDiv(_isOver);
 			}
 		}
-		window.onresize = function(e) {
-			if (typeof Module == 'object') {
-				if (typeof Module.Resize == 'function') {
-					Module.Resize(window.innerWidth, window.innerHeight);
-					Module.XDRenderData();
-				}
+		window.onresize = function (e) {
+			if (typeof Module == 'object' && typeof Module.Resize == 'function') {
+				Module.Resize(window.innerWidth, window.innerHeight);
+				Module.XDRenderData();
 			}
 		};
 	</script>
-	<script src="./js/objectControll.js" defer></script>
-	<script src="./js/init.js" defer></script>
+	<!-- 레이어 및 객체를 제어하는 메인 로직 (ES6 Module 필수) -->
+	<script type="module" src="./js/main.js"></script>
 </body>
 </html>
