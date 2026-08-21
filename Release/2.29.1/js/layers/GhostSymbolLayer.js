@@ -12,13 +12,6 @@ class GhostSymbolLayerManager {
         this.lastMouseEvent = null;
 
         this.wolfCount = 0;
-        this.baseLocation = {
-            lon: 129.1283,
-            lat: 35.1708,
-            dLon: 0.0002,
-            dLat: 0.0006,
-            scaleFactor: 1.1
-        };
     }
 
     init() {
@@ -108,7 +101,7 @@ class GhostSymbolLayerManager {
     }
 
     /**
-     * [버튼 클릭 시 실행] 늑대 객체를 계속 생성하는 메서드
+     * [버튼 클릭 시 실행] 현재 카메라 중심 지점(건물 표면 포함)에 늑대 객체 생성
      */
     createNextWolf() {
         if (!this.layer || !this.isResourceLoaded) {
@@ -116,38 +109,64 @@ class GhostSymbolLayerManager {
             return;
         }
 
-        this.wolfCount++;
-        var count = this.wolfCount;
-        var p = this.baseLocation;
-
-        var currentLon, currentLat;
-
-        if (count === 1) {
-            // 첫 번째 늑대: lon + dLon, lat + dLat
-            currentLon = p.lon + p.dLon;
-            currentLat = p.lat + p.dLat;
-        } else {
-            // 이후 늑대: lon + dLon * (scaleFactor ^ (count - 1))
-            var factor = Math.pow(p.scaleFactor, count - 1);
-            currentLon = p.lon + p.dLon * factor;
-            currentLat = p.lat + p.dLat * factor;
+        // 1. 카메라 중심의 3D 지점(건물/지형 표면 좌표 포함) 구하기
+        var cameraCenter = this._getCenterMapPosition();
+        if (!cameraCenter) {
+            console.warn("카메라 중심 좌표를 찾을 수 없습니다.");
+            return;
         }
 
-        // 지형 고도 계산
+        var currentLon = cameraCenter.longitude;
+        var currentLat = cameraCenter.latitude;
+
+        // 2. 바닥 지형 고도 구하기
         var terrainAlt = Module.getMap().getTerrHeightFast(currentLon, currentLat);
-        if (isNaN(terrainAlt) || terrainAlt <= -9999) terrainAlt = 10.0;
+        if (isNaN(terrainAlt) || terrainAlt <= -9999) terrainAlt = 0.0;
 
-        var finalAlt = terrainAlt + this.WOLF_FEET_OFFSET;
-        var objectId = "wolf_obj_" + count;
+        // 3. ScreenToMapPointEX가 감지한 표면 고도(건물/오브젝트 높이 포함) 확인
+        var surfaceAlt = cameraCenter.altitude;
 
-        // 객체 생성
+        // 지형 고도와 표면 고도를 비교하여 더 높은 위치(건물 옥상 등)를 최종 바닥면으로 선택
+        if (isNaN(surfaceAlt) || surfaceAlt < terrainAlt) {
+            surfaceAlt = terrainAlt;
+        }
+
+        // 4. 최종 고도 = (건물 옥상 또는 지형 고도) + 발 오프셋
+        var finalAlt = surfaceAlt + this.WOLF_FEET_OFFSET;
+
+        // 5. 객체 ID 생성 및 객체 배치
+        this.wolfCount++;
+        var objectId = "wolf_obj_" + this.wolfCount;
+
         this._createWolf(objectId, currentLon, currentLat, finalAlt);
-        console.log(`🐺 ${objectId} 생성 완료 (위도: ${currentLat}, 경도: ${currentLon})`);
+        console.log(`🐺 ${objectId} 생성 완료 (위도: ${currentLat.toFixed(6)}, 경도: ${currentLon.toFixed(6)}, 고도: ${finalAlt.toFixed(2)}m)`);
 
-        // 화면 즉시 재렌더링
+        // 6. 화면 즉시 재렌더링
         if (typeof Module.XDRenderData === "function") {
             Module.XDRenderData();
         }
+    }
+
+    /**
+     * 화면 중앙 픽셀의 3D 표면 좌표(건물/지형) 구하기
+     */
+    _getCenterMapPosition() {
+        if (!Module.canvas || !Module.getMap()) return null;
+
+        var centerX = Module.canvas.width / 2;
+        var centerY = Module.canvas.height / 2;
+
+        // ScreenToMapPointEX는 건물 표면이 있을 경우 건물 옥상의 altitude를 반환합니다.
+        var centerPos = Module.getMap().ScreenToMapPointEX(new Module.JSVector2D(centerX, centerY));
+
+        if (!centerPos) {
+            var camera = Module.getViewCamera();
+            if (camera && typeof camera.getLookAt === "function") {
+                centerPos = camera.getLookAt();
+            }
+        }
+
+        return centerPos;
     }
 
     _createWolf(id, x, y, z) {
@@ -159,6 +178,78 @@ class GhostSymbolLayerManager {
 
         this.layer.addObject(wolf, 0);
         this.symbols.set(id, wolf);
+    }
+
+    /**
+     * 고스트 심볼 레이어 표시 / 숨김 제어
+     * @param {boolean} isVisible 
+     */
+    toggleLayer(isVisible) {
+        if (this.layer && typeof this.layer.setVisible === "function") {
+            this.layer.setVisible(isVisible);
+
+            // 레이어를 끌 때 선택 해제 및 컨트롤 정리
+            if (!isVisible) {
+                if (typeof Module.getMap === "function" && Module.getMap()) {
+                    Module.getMap().clearSelectObj();
+                }
+
+                this.isMoving = false;
+                this.displayMovingButton(false);
+
+                if (typeof Module.getControl === "function" && Module.getControl()) {
+                    Module.getControl().activeMouse(true);
+                }
+            }
+
+            this.refresh();
+        }
+    }
+
+    /**
+     * 화면 강제 갱신
+     */
+    refresh() {
+        if (typeof Module.XDRenderData === "function") {
+            Module.XDRenderData();
+        }
+    }
+
+    /**
+     * 객체 이동 버튼(+) 표출 및 위치 설정 (3D 타일 건물/오브젝트 고도 반영)
+     * @param {boolean} _display - 버튼 표출 여부
+     * @param {Module.JSVector3D} _mapPosition - 이동 대상 객체의 3D 지도 좌표
+     */
+    displayMovingButton(_display, _mapPosition) {
+        var moveButton = document.getElementById("moving");
+        if (!moveButton) return;
+
+        if (_display && _mapPosition) {
+            moveButton.style.display = "block";
+
+            // 객체 위치의 지형 고도 측정
+            var terrainAlt = Module.getMap().getTerrHeightFast(_mapPosition.longitude, _mapPosition.latitude);
+            if (isNaN(terrainAlt) || terrainAlt <= -9999) terrainAlt = 0.0;
+
+            // 객체 자체의 고도(건물/표면 높이가 포함된 altitude) 확인
+            var surfaceAlt = _mapPosition.altitude;
+
+            // 지형 고도와 객체 표면 고도를 비교하여 더 높은 곳(건물 옥상 등)을 버튼의 3D 기준 고도로 지정
+            var targetAlt = (surfaceAlt > terrainAlt) ? surfaceAlt : terrainAlt;
+
+            // 발끝/표면 고도 좌표를 3D 공간 벡터로 생성
+            var buttonPosition = new Module.JSVector3D(_mapPosition.longitude, _mapPosition.latitude, targetAlt);
+
+            // 3D 지도 좌표를 화면(Screen Pixel) 2D 좌표로 변환
+            var screenPosition = Module.getMap().MapToScreenPointEX(buttonPosition);
+
+            // 2D 캔버스 좌표에 맞춰 버튼 위치 배치 (버튼 중심점 보정: -15px)
+            moveButton.style.left = parseInt(screenPosition.x - 15) + "px";
+            moveButton.style.top = parseInt(screenPosition.y - 15) + "px";
+
+        } else {
+            moveButton.style.display = "none";
+        }
     }
 }
 

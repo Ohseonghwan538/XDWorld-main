@@ -11,13 +11,13 @@ export function mouseEvents() {
         // 💡 선택된 객체의 키(Key) 값을 통해 동일 레이어 내에서 해당 개체 추출
         var targetLayer = ghostSymbolLayer.layer;
         if (!targetLayer) {
-            displayMovingButton(false);
+            ghostSymbolLayer.displayMovingButton(false);
             return;
         }
 
         var object = targetLayer.keyAtObject(e.objKey);
         if (object == null) {
-            displayMovingButton(false);
+            ghostSymbolLayer.displayMovingButton(false);
             return;
         }
     
@@ -26,7 +26,7 @@ export function mouseEvents() {
         position.Altitude += (object.getScale().depth * object.getBasePointY());
 
         // Display the move button at the selected object's position
-        displayMovingButton(true, position);
+        ghostSymbolLayer.displayMovingButton(true, position);
     });
 
     // Object movement button event setup
@@ -36,7 +36,7 @@ export function mouseEvents() {
         var selectedObject = Module.getMap().getSelectObject();
         if (selectedObject) {
             // Object movement state on
-            window.MODEL_MOVING = true;
+            ghostSymbolLayer.isMoving = true;
 
             // 선택된 객체의 피킹을 잠시 꺼서 마우스 레이캐스팅 방해 금지
             selectedObject.setPickable(false);
@@ -52,7 +52,7 @@ export function mouseEvents() {
         }
 
         // Object movement state off
-        window.MODEL_MOVING = false;
+        ghostSymbolLayer.isMoving = false;
         Module.getControl().activeMouse(true);
     };
     
@@ -60,7 +60,7 @@ export function mouseEvents() {
 
         // Deselect the object and hide the object movement button if no object is selected
         Module.getMap().clearSelectObj();
-        displayMovingButton(false);
+        ghostSymbolLayer.displayMovingButton(false);
     };
     
     Module.canvas.onmouseup = function() {
@@ -68,7 +68,7 @@ export function mouseEvents() {
         // Hide the object movement button if no object is selected
         var selectedObject = Module.getMap().getSelectObject();
         if (selectedObject == null) {
-            displayMovingButton(false);
+            ghostSymbolLayer.displayMovingButton(false);
         }
     };
 
@@ -79,7 +79,7 @@ export function mouseEvents() {
     Module.canvas.onmousemove = function (e) {
 
         // Move the spherical object according to the mouse position if the object movement state is on
-        if (window.MODEL_MOVING) {
+        if (ghostSymbolLayer.isMoving) {
 
             // 최신 마우스 이벤트 저장
             lastMouseEvent = e;
@@ -100,9 +100,9 @@ export function mouseEvents() {
         } else {
 
             // Hide the object movement button being displayed and deselect the object when not using the object movement button
-            if (e.buttons > 0 && !window.MODEL_MOVING) {
+            if (e.buttons > 0 && !ghostSymbolLayer.isMoving) {
                 Module.getMap().clearSelectObj();
-                displayMovingButton(false);
+                ghostSymbolLayer.displayMovingButton(false);
             }
         }
     };
@@ -110,7 +110,7 @@ export function mouseEvents() {
     function updateObjectPosition() {
         isPendingRaf = false;
 
-        if (!window.MODEL_MOVING || !lastMouseEvent) return;
+        if (!ghostSymbolLayer.isMoving || !lastMouseEvent) return;
 
         var selectedObject = Module.getMap().getSelectObject();
         if (selectedObject) {
@@ -144,37 +144,5 @@ export function mouseEvents() {
             }
         }
     }
-}
 
-/* Set the display of the object movement button */
-function displayMovingButton(_display, _mapPosition) {
-
-    // Return the element
-    var moveButton = document.getElementById("moving");
-    if (moveButton == null) {
-        return;
-    }
-
-    // Set the button display
-    if (_display && _mapPosition) {
-        
-        moveButton.style.display = "block";
-
-        // 💡 1. 현재 객체 위치(경도, 위도)의 지형 고도를 빠르게 가져옵니다.
-        var terrainAlt = Module.getMap().getTerrHeightFast(_mapPosition.longitude, _mapPosition.latitude);
-
-        // 💡 2. 버튼 제어 포인트의 고도를 발끝(지면) 고도로 맞춘 좌표 생성
-        // (만약 지형 고도가 아직 0인 경우 기존 고도를 유지하도록 예외 처리)
-        var targetAlt = (terrainAlt > 0) ? terrainAlt : _mapPosition.altitude;
-        var buttonPosition = new Module.JSVector3D(_mapPosition.longitude, _mapPosition.latitude, targetAlt);
-
-        // 💡 3. 발끝 지면 고도 좌표를 화면(Screen) 2D 좌표로 변환
-        var screenPosition = Module.getMap().MapToScreenPointEX(buttonPosition);
-        
-        moveButton.style.left = parseInt(screenPosition.x - 15) + "px";
-        moveButton.style.top = parseInt(screenPosition.y - 15) + "px";
-
-    } else {
-        moveButton.style.display = "none";
-    }
 }

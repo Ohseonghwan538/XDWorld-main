@@ -11,8 +11,34 @@ window.addEventListener("XDWorldLoaded", function() {
 
     // 레이어 및 마우스 이벤트 초기화
     tileLayer.init();
-    ghostSymbolLayer.init();
     mouseEvents();
+
+    //  레이어 생성 버튼 이벤트
+    const addLayerBtn = document.getElementById("add-layer-btn");
+    if (addLayerBtn) {
+        addLayerBtn.addEventListener("click", () => {
+            ghostSymbolLayer.init();
+        });
+    }
+
+    const toggleLayerBtn = document.getElementById("toggle-layer-btn");
+    if (toggleLayerBtn) {
+        toggleLayerBtn.addEventListener("click", () => {
+            // 상태값 반전 (true -> false / false -> true)
+            isBuildingVisible = !isBuildingVisible;
+
+            // ghostSymbolLayer 클래스 내부의 toggleLayer 메서드 호출
+            ghostSymbolLayer.toggleLayer(isBuildingVisible);
+
+            // 버튼 UI 텍스트 업데이트
+            if (isBuildingVisible) {
+                toggleLayerBtn.innerText = "🌏 ghostsymbol layer 끄기";
+            } else {
+                toggleLayerBtn.innerText = "🌏 ghostsymbol layer 켜기";
+            }
+        });
+    }
+
 
     //  늑대 생성 버튼 이벤트
     const addWolfBtn = document.getElementById("add-wolf-btn");
